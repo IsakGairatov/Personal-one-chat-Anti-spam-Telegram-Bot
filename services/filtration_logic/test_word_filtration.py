@@ -27,8 +27,52 @@ def test_has_spam_words():
 
 msg1 = '''россиянин сам себя зацензурил, лишь бы не видеть правду о себе. ммм, ничего нового. не знала только, что он депутат.'''
 
-def test_one(msg):
 
-    print(find_spam_word(msg))
+import json
+from collections import Counter
 
-test_one(msg1)
+
+def analyze_messages(
+    input_file: str,
+    output_file: str,
+):
+    with open(input_file, "r", encoding="utf-8") as file:
+        messages = json.load(file)
+
+    spam_messages = []
+    spam_words_stats = Counter()
+
+    for message in messages:
+        text = message.get("text", "")
+
+        if not text:
+            continue
+
+        is_spam, spam_word = find_spam_word(text)
+
+        if not is_spam:
+            continue
+
+        spam_messages.append({
+            **message,
+            "spam_word": spam_word,
+        })
+
+        spam_words_stats[spam_word] += 1
+
+    with open(output_file, "w", encoding="utf-8") as file:
+        json.dump(
+            spam_messages,
+            file,
+            ensure_ascii=False,
+            indent=4,
+        )
+
+    print(f"Всего сообщений: {len(messages)}")
+    print(f"Найдено спам-сообщений: {len(spam_messages)}")
+
+    print("\nСтатистика по словам:")
+
+    for word, count in spam_words_stats.most_common():
+        print(f"{word}: {count}")
+
