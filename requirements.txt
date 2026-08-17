@@ -2,3 +2,5 @@ aiogram
 python-dotenv
 sqlalchemy
 aiosqlite
+google-genai
+pymorphy3

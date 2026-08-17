@@ -33,6 +33,10 @@ class User(Base):
         default=False,
     )
 
+    amount_of_messages: Mapped[int] = mapped_column(
+        default=0,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
