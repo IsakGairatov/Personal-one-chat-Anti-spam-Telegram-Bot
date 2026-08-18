@@ -66,6 +66,10 @@ class SpamMessage(Base):
         Text,
     )
 
+    spam_keyword: Mapped[str] = mapped_column(
+        String(255),
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
