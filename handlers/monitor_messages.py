@@ -31,6 +31,7 @@ async def message_handler(message: Message):
 
         if message.from_user.username:
             await link_reply.reply(f"@{message.from_user.username}")
+        return
 
 
     if c_user.amount_of_messages <= 100:
