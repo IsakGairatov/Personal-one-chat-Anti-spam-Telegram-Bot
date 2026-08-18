@@ -1,7 +1,7 @@
 from aiogram import Router
 
 from handlers.start import router as start_router
-from handlers.messages import router as messages_router
+from handlers.monitor_messages import router as messages_router
 
 
 router = Router()

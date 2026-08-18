@@ -38,9 +38,10 @@ SYSTEM_PROMPT = """Ты — антиспам-модератор Telegram-чат�
 async def check_spam(text: str) -> bool:
     response = await client.aio.models.generate_content(
         model="gemini-3.1-flash-lite",
-        contents=SYSTEM_PROMPT + f"\n\nСообщение:\n{text}",
+        contents=f"Сообщение:\n{text}",
         config=types.GenerateContentConfig(
-        )
+            system_instruction=SYSTEM_PROMPT,
+        ),
     )
 
     return float(response.text.strip()) > 0.75

@@ -37,6 +37,7 @@ async def add_spam_message(
     user_id: int,
     telegram_message_id: int,
     text: str,
+    spam_keyword: str,
 ) -> SpamMessage:
 
     async with async_session() as session:
@@ -44,6 +45,7 @@ async def add_spam_message(
             user_id=user_id,
             telegram_message_id=telegram_message_id,
             text=text,
+            spam_keyword=spam_keyword
         )
 
         session.add(spam_message)
