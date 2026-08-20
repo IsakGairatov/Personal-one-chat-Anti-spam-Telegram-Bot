@@ -33,8 +33,8 @@ async def message_handler(message: Message):
 
         if message.from_user.username:
             link_reply2 = await link_reply.reply(f"@{message.from_user.username}")
-            await delete_after(link_reply2)
-        await delete_after(link_reply)
+            asyncio.create_task(delete_after(link_reply2))
+        asyncio.create_task(delete_after(link_reply))
 
         return
 
@@ -54,31 +54,20 @@ async def message_handler(message: Message):
                 try:
                     await message.delete()
                     reply_spam = await message.answer(us_name + ', ' + Reply_to_spam)
-                    await delete_after(reply_spam, 180)
+                    asyncio.create_task(delete_after(reply_spam, 180))
 
                 except:
                     print("Error")
 
-                spam_count = await get_spam_count_last_30_days(message.from_user.id)
 
-                print("Telegram ID:", message.from_user.id)
-                print("Spam count:", spam_count)
-
-                if spam_count >= 3:
-                    print("БАНИМ")
+                if await get_spam_count_last_30_days(c_user.id) >= 3:
                     await message.bot.ban_chat_member(
                         chat_id=message.chat.id,
                         user_id=message.from_user.id
                     )
-
-                if await get_spam_count_last_30_days(message.from_user.id) >= 3:
-                    await message.bot.ban_chat_member(
-                        chat_id=message.chat.id,
-                        user_id=message.from_user.id
-                    )
-                    await ban_user(message.from_user.id)
+                    await ban_user(c_user.id)
                     ban_notif = await message.answer(us_name + ', ' + Ban_notif)
-                    await delete_after(ban_notif, 180)
+                    asyncio.create_task(delete_after(ban_notif, 180))
 
 
 
