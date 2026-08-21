@@ -2,7 +2,7 @@ import asyncio
 
 from config import CHAT_ID, Reply_to_link, Reply_to_spam, Ban_notif
 import re
-from aiogram.types import Message
+from aiogram.types import Message, User
 from aiogram import Router, F
 from services.filtration_logic.filter_pymorphy3 import find_spam_word
 from services.ai_apis.Gemini_spam_detection import check_spam
@@ -15,30 +15,21 @@ async def message_handler(message: Message):
     if not message.text:
         return
 
+    if await basic_tglink_spam_detection(message):
+        return
+
     c_user = await get_or_create_user(
         message.from_user.id,
         message.from_user.username,
         message.from_user.first_name
     )
 
-    TG_LINK_PATTERN = re.compile(
-        r"(?:https?://)?(?:www\.)?(?:t\.me|telegram\.me)/[^\s]+",
-        re.IGNORECASE,
-    )
-
-    if (TG_LINK_PATTERN.search(message.text)
-            or await has_tg_chat_link(message)):
-        await message.delete()
-        link_reply = await message.answer(Reply_to_link)
-
-        if message.from_user.username:
-            link_reply2 = await link_reply.reply(f"@{message.from_user.username}")
-            asyncio.create_task(delete_after(link_reply2))
-        asyncio.create_task(delete_after(link_reply))
-
-        return
+    await full_anti_spam_logic(c_user, message)
 
 
+
+
+async def full_anti_spam_logic(c_user: User, message: Message):
     if c_user.amount_of_messages <= 100:
         c_user.amount_of_messages += 1
 
@@ -48,8 +39,10 @@ async def message_handler(message: Message):
             if await check_spam(message.text):
                 await add_spam_message(c_user.id, message.message_id, message.text, has_spam_word[1])
 
-                if message.from_user.username: us_name = "@" + message.from_user.username
-                else: us_name = message.from_user.first_name
+                if message.from_user.username:
+                    us_name = "@" + message.from_user.username
+                else:
+                    us_name = message.from_user.first_name
 
                 try:
                     await message.delete()
@@ -58,7 +51,6 @@ async def message_handler(message: Message):
 
                 except:
                     print("Error")
-
 
                 if await get_spam_count_last_30_days(c_user.id) >= 3:
                     await message.bot.ban_chat_member(
@@ -71,9 +63,28 @@ async def message_handler(message: Message):
 
 
 
+TG_LINK_PATTERN = re.compile(
+        r"(?:https?://)?(?:www\.)?(?:t\.me|telegram\.me)/[^\s]+",
+        re.IGNORECASE,
+    )
 
 USERNAME_PATTERN = re.compile(r"(?<!\w)@([a-zA-Z0-9_]{5,32})")
 
+
+async def basic_tglink_spam_detection(message: Message):
+
+    if (TG_LINK_PATTERN.search(message.text)
+            or await has_tg_chat_link(message)):
+        await message.delete()
+        link_reply = await message.answer(Reply_to_link)
+
+        if message.from_user.username:
+            link_reply2 = await link_reply.reply(f"@{message.from_user.username}")
+            asyncio.create_task(delete_after(link_reply2))
+        asyncio.create_task(delete_after(link_reply))
+
+        return True
+    return False
 
 async def has_tg_chat_link(message: Message) -> bool:
     usernames = USERNAME_PATTERN.findall(message.text or "")
