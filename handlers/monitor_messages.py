@@ -12,7 +12,17 @@ router = Router()
 
 @router.message(F.chat.id == CHAT_ID)
 async def message_handler(message: Message):
+    member = await message.bot.get_chat_member(
+        chat_id=message.chat.id,
+        user_id=message.from_user.id,
+    )
+
+    if member.status in {"creator", "administrator"}:
+        return
+
     if not message.text:
+        if message.reply_markup:
+            await delete_minor_spam(message)
         return
 
     if await basic_tglink_spam_detection(message):
@@ -27,6 +37,12 @@ async def message_handler(message: Message):
     await full_anti_spam_logic(c_user, message)
 
 
+TG_LINK_PATTERN = re.compile(
+        r"(?:https?://)?(?:www\.)?(?:t\.me|telegram\.me)/[^\s]+",
+        re.IGNORECASE,
+    )
+
+USERNAME_PATTERN = re.compile(r"(?<!\w)@([a-zA-Z0-9_]{5,32})")
 
 
 async def full_anti_spam_logic(c_user: User, message: Message):
@@ -38,6 +54,12 @@ async def full_anti_spam_logic(c_user: User, message: Message):
         if has_spam_word[0] == True:
             if await check_spam(message.text):
                 await add_spam_message(c_user.id, message.message_id, message.text, has_spam_word[1])
+
+                bot_caller = message.guest_bot_caller_user
+                if bot_caller:
+                    caller_user = await get_or_create_user(bot_caller.id, bot_caller.username, bot_caller.first_name)
+                    if caller_user.amount_of_messages >= 100:
+                        await add_spam_message(bot_caller.id, message.message_id, message.text, has_spam_word[1])
 
                 if message.from_user.username:
                     us_name = "@" + message.from_user.username
@@ -61,27 +83,20 @@ async def full_anti_spam_logic(c_user: User, message: Message):
                     ban_notif = await message.answer(us_name + ', ' + Ban_notif)
                     asyncio.create_task(delete_after(ban_notif, 180))
 
+async def delete_minor_spam(message: Message):
+    await message.delete()
+    link_reply = await message.answer(Reply_to_link)
 
-
-TG_LINK_PATTERN = re.compile(
-        r"(?:https?://)?(?:www\.)?(?:t\.me|telegram\.me)/[^\s]+",
-        re.IGNORECASE,
-    )
-
-USERNAME_PATTERN = re.compile(r"(?<!\w)@([a-zA-Z0-9_]{5,32})")
-
+    if message.from_user.username:
+        link_reply2 = await link_reply.reply(f"@{message.from_user.username}")
+        asyncio.create_task(delete_after(link_reply2))
+    asyncio.create_task(delete_after(link_reply))
 
 async def basic_tglink_spam_detection(message: Message):
 
     if (TG_LINK_PATTERN.search(message.text)
             or await has_tg_chat_link(message)):
-        await message.delete()
-        link_reply = await message.answer(Reply_to_link)
-
-        if message.from_user.username:
-            link_reply2 = await link_reply.reply(f"@{message.from_user.username}")
-            asyncio.create_task(delete_after(link_reply2))
-        asyncio.create_task(delete_after(link_reply))
+        await delete_minor_spam()
 
         return True
     return False
