@@ -42,14 +42,19 @@ class User(Base):
         default=datetime.utcnow,
     )
 
-    spam_messages: Mapped[list["SpamMessage"]] = relationship(
+    spam_messages: Mapped[list["SpamMessages"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    bot_tagged_messages: Mapped[list["BotTaggedMessages"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
     )
 
 
-class SpamMessage(Base):
-    __tablename__ = "spam_messages"
+class Messages_Base(Base):
+    __abstract__ = True
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
@@ -66,15 +71,33 @@ class SpamMessage(Base):
         Text,
     )
 
-    spam_keyword: Mapped[str] = mapped_column(
-        String(255),
-    )
-
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
     )
 
+
+class SpamMessages(Messages_Base):
+    __tablename__ = "spam_messages"
+
+    spam_keyword: Mapped[str] = mapped_column(
+        String(255),
+    )
+
     user: Mapped["User"] = relationship(
         back_populates="spam_messages",
     )
+
+
+
+class BotTaggedMessages(Messages_Base):
+    __tablename__ = "bot_tagged_messages"
+
+    tagged_bot_username: Mapped[str] = mapped_column(
+        String(255),
+    )
+
+    user: Mapped["User"] = relationship(
+        back_populates="bot_tagged_messages",
+    )
+
