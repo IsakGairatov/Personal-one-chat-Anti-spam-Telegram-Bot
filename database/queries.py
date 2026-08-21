@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import select, func
 from database.db import async_session
-from database.models import User, SpamMessages
+from database.models import User, SpamMessage
 
 
 async def get_or_create_user(
@@ -38,10 +38,10 @@ async def add_spam_message(
     telegram_message_id: int,
     text: str,
     spam_keyword: str,
-) -> SpamMessages:
+) -> SpamMessage:
 
     async with async_session() as session:
-        spam_message = SpamMessages(
+        spam_message = SpamMessage(
             user_id=user_id,
             telegram_message_id=telegram_message_id,
             text=text,
@@ -63,10 +63,10 @@ async def get_spam_count_last_30_days(
 
     async with async_session() as session:
         result = await session.execute(
-            select(func.count(SpamMessages.id))
+            select(func.count(SpamMessage.id))
             .where(
-                SpamMessages.user_id == user_id,
-                SpamMessages.created_at >= thirty_days_ago,
+                SpamMessage.user_id == user_id,
+                SpamMessage.created_at >= thirty_days_ago,
             )
         )
 
