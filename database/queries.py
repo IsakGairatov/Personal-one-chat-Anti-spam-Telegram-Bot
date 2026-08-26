@@ -40,6 +40,7 @@ async def increment_user_messages(user_id: int):
 
         user.amount_of_messages += 1
         await session.commit()
+        await session.refresh(user)
 
 async def add_spam_message(
     user_id: int,

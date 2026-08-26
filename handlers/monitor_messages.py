@@ -13,6 +13,10 @@ router = Router()
 
 @router.message(F.chat.id == CHAT_ID)
 async def message_handler(message: Message):
+
+    if await check_linked_channel(message):
+        return
+
     member = await message.bot.get_chat_member(
         chat_id=message.chat.id,
         user_id=message.from_user.id,
@@ -21,13 +25,7 @@ async def message_handler(message: Message):
     if member.status in {"creator", "administrator"}:
         return
 
-    if not message.text:
-        if message.reply_markup:
-            await delete_minor_spam(message)
-        return
-
-    if await basic_tglink_spam_detection(message):
-        return
+    text_to_check = message.text or message.caption or ""
 
     c_user = await get_or_create_user(
         message.from_user.id,
@@ -35,7 +33,21 @@ async def message_handler(message: Message):
         message.from_user.first_name
     )
 
-    await full_anti_spam_logic(c_user, message)
+    if message.reply_markup:
+        await message.delete()
+        if c_user.amount_of_messages < 100:
+            await add_spam_message(c_user.id, message.message_id, text_to_check, "TG Link")
+        return
+
+    if await basic_tglink_spam_detection(text_to_check, message):
+        if c_user.amount_of_messages < 100:
+            await add_spam_message(c_user.id, message.message_id, text_to_check, "TG Link")
+        return
+
+    if await full_anti_spam_logic(c_user, text_to_check, message):
+        return
+
+    await increment_user_messages(c_user.id)
 
 
 TG_LINK_PATTERN = re.compile(
@@ -46,21 +58,20 @@ TG_LINK_PATTERN = re.compile(
 USERNAME_PATTERN = re.compile(r"(?<!\w)@([a-zA-Z0-9_]{5,32})")
 
 
-async def full_anti_spam_logic(c_user: User, message: Message):
+async def full_anti_spam_logic(c_user: User, text_to_check : str, message: Message):
     if c_user.amount_of_messages < 100:
-        await increment_user_messages(c_user.id)
 
-        has_spam_word = await find_spam_word(message.text)
+        has_spam_word = await find_spam_word(text_to_check)
 
         if has_spam_word[0]:
-            if await check_spam(message.text):
-                await add_spam_message(c_user.id, message.message_id, message.text, has_spam_word[1])
+            if await check_spam(text_to_check):
+                await add_spam_message(c_user.id, message.message_id, text_to_check, has_spam_word[1])
 
                 bot_caller = message.guest_bot_caller_user
                 if bot_caller:
                     caller_user = await get_or_create_user(bot_caller.id, bot_caller.username, bot_caller.first_name)
-                    if caller_user.amount_of_messages >= 100:
-                        await add_spam_message(bot_caller.id, message.message_id, message.text, has_spam_word[1])
+                    if caller_user.amount_of_messages < 100:
+                        await add_spam_message(caller_user.id, message.message_id, text_to_check, has_spam_word[1])
 
                 if message.from_user.username:
                     us_name = "@" + message.from_user.username
@@ -74,7 +85,6 @@ async def full_anti_spam_logic(c_user: User, message: Message):
                 except:
                     print("delete reply in full_anti_spam_logic error")
 
-
                 if await get_spam_count_last_30_days(c_user.id) >= 3:
                     await message.bot.ban_chat_member(
                         chat_id=message.chat.id,
@@ -84,26 +94,32 @@ async def full_anti_spam_logic(c_user: User, message: Message):
                     ban_notif = await message.answer(us_name + ', ' + Ban_notif)
                     asyncio.create_task(delete_after(ban_notif, 180))
 
+                return True
+    return False
+
 async def delete_minor_spam(message: Message):
-    await message.delete()
-    link_reply = await message.answer(Reply_to_link)
+    try:
+        await message.delete()
+        link_reply = await message.answer(Reply_to_link)
 
-    if message.from_user.username:
-        link_reply2 = await link_reply.reply(f"@{message.from_user.username}")
-        asyncio.create_task(delete_after(link_reply2))
-    asyncio.create_task(delete_after(link_reply))
+        if message.from_user.username:
+            link_reply2 = await link_reply.reply(f"@{message.from_user.username}")
+            asyncio.create_task(delete_after(link_reply2))
+        asyncio.create_task(delete_after(link_reply))
+    except:
+        print("delete minor spam error")
 
-async def basic_tglink_spam_detection(message: Message):
+async def basic_tglink_spam_detection(text_to_check, message: Message):
 
-    if (TG_LINK_PATTERN.search(message.text)
-            or await has_tg_chat_link(message)):
+    if (TG_LINK_PATTERN.search(text_to_check)
+            or await has_tg_chat_link(text_to_check, message)):
         await delete_minor_spam(message)
 
         return True
     return False
 
-async def has_tg_chat_link(message: Message) -> bool:
-    usernames = USERNAME_PATTERN.findall(message.text or "")
+async def has_tg_chat_link(text_to_check: str, message: Message) -> bool:
+    usernames = USERNAME_PATTERN.findall(text_to_check or "")
 
     for username in usernames:
         try:
@@ -114,6 +130,17 @@ async def has_tg_chat_link(message: Message) -> bool:
 
         except Exception:
             continue
+
+    return False
+
+async def check_linked_channel(message: Message):
+    chat = await message.bot.get_chat(message.chat.id)
+
+    if (
+            message.sender_chat
+            and message.sender_chat.type == "channel"
+            and message.sender_chat.id == chat.linked_chat_id
+    ): return True
 
     return False
 
