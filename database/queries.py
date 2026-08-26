@@ -33,6 +33,14 @@ async def get_or_create_user(
 
         return user
 
+
+async def increment_user_messages(user_id: int):
+    async with async_session() as session:
+        user = await session.get(User, user_id)
+
+        user.amount_of_messages += 1
+        await session.commit()
+
 async def add_spam_message(
     user_id: int,
     telegram_message_id: int,

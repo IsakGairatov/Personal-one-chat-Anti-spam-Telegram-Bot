@@ -2,11 +2,12 @@ import asyncio
 
 from config import CHAT_ID, Reply_to_link, Reply_to_spam, Ban_notif
 import re
-from aiogram.types import Message, User
+from aiogram.types import Message
 from aiogram import Router, F
 from services.filtration_logic.filter_pymorphy3 import find_spam_word
 from services.ai_apis.Gemini_spam_detection import check_spam
-from database.queries import get_or_create_user, add_spam_message, get_spam_count_last_30_days, ban_user
+from database.queries import get_or_create_user, add_spam_message, get_spam_count_last_30_days, ban_user, increment_user_messages
+from database.models import User
 
 router = Router()
 
@@ -46,12 +47,12 @@ USERNAME_PATTERN = re.compile(r"(?<!\w)@([a-zA-Z0-9_]{5,32})")
 
 
 async def full_anti_spam_logic(c_user: User, message: Message):
-    if c_user.amount_of_messages <= 100:
-        c_user.amount_of_messages += 1
+    if c_user.amount_of_messages < 100:
+        await increment_user_messages(c_user.id)
 
         has_spam_word = await find_spam_word(message.text)
 
-        if has_spam_word[0] == True:
+        if has_spam_word[0]:
             if await check_spam(message.text):
                 await add_spam_message(c_user.id, message.message_id, message.text, has_spam_word[1])
 
@@ -70,9 +71,9 @@ async def full_anti_spam_logic(c_user: User, message: Message):
                     await message.delete()
                     reply_spam = await message.answer(us_name + ', ' + Reply_to_spam)
                     asyncio.create_task(delete_after(reply_spam, 180))
-
                 except:
-                    print("Error")
+                    print("delete reply in full_anti_spam_logic error")
+
 
                 if await get_spam_count_last_30_days(c_user.id) >= 3:
                     await message.bot.ban_chat_member(
@@ -96,7 +97,7 @@ async def basic_tglink_spam_detection(message: Message):
 
     if (TG_LINK_PATTERN.search(message.text)
             or await has_tg_chat_link(message)):
-        await delete_minor_spam()
+        await delete_minor_spam(message)
 
         return True
     return False
@@ -118,4 +119,7 @@ async def has_tg_chat_link(message: Message) -> bool:
 
 async def delete_after(message: Message, seconds: int = 60):
     await asyncio.sleep(seconds)
-    await message.delete()
+    try:
+        await message.delete()
+    except:
+        print("delete_after error")
