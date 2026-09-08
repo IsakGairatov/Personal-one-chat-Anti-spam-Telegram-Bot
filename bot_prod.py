@@ -61,8 +61,3 @@ async def main():
         host="0.0.0.0",
         port=int(os.getenv("PORT", "10000")),
     )
-
-
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
