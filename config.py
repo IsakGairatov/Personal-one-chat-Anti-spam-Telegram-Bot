@@ -14,3 +14,5 @@ Ban_notif = os.getenv("Ban_notif")
 
 GEMINI_ANTI_SPAM_API_KEY = os.getenv("GEMINI_ANTI_SPAM_API_KEY")
 GEMINI_GOOGLING_API_KEY = os.getenv("GEMINI_GOOGLING_API_KEY")
+
+postgress_url = os.getenv("POSTGRES_DB")
