@@ -1,5 +1,8 @@
-aiogram
-python-dotenv
+aiogram==3.17.0
+aiohttp
+pydantic==2.10.5
+pydantic-core==2.27.2
+python-dotenv==1.0.1
 sqlalchemy
 aiosqlite
 google-genai
