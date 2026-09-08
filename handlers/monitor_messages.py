@@ -69,8 +69,8 @@ async def full_anti_spam_logic(c_user: User, text_to_check : str, message: Messa
         if has_spam_word[0]:
             if await check_spam(text_to_check):
                 try:
-                    await message.delete()
                     reply_spam = await message.answer(us_name + ', ' + Reply_to_spam)
+                    await message.delete()
                     asyncio.create_task(delete_after(reply_spam, 180))
                 except:
                     print("delete reply in full_anti_spam_logic error")
@@ -82,7 +82,7 @@ async def full_anti_spam_logic(c_user: User, text_to_check : str, message: Messa
 
 async def add_to_spam(user: User, msg:Message, txt:str, spamword:str, us_name: str, is_guestMode=False):
     if user.amount_of_messages < 100:
-        await add_spam_message(user.id, msg.id, txt, spamword)
+        await add_spam_message(user.id, msg.message_id, txt, spamword)
         await check30d(user, msg, us_name)
 
         if not is_guestMode:
