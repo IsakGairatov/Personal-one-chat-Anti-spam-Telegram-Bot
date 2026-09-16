@@ -1,3 +1,4 @@
+import asyncio
 import os
 from dotenv import load_dotenv
 from google import genai
@@ -34,15 +35,26 @@ SYSTEM_PROMPT = """Ты — антиспам-модератор Telegram-чат�
 
 
 async def check_spam(text: str) -> bool:
-    response = await client.aio.models.generate_content(
-        model="gemini-3.1-flash-lite",
-        contents=f"Сообщение:\n{text}",
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
-        ),
-    )
+    for attempt in range(3):
+        try:
+            response = await client.aio.models.generate_content(
+                model="gemini-3.1-flash-lite",
+                contents=f"Сообщение:\n{text}",
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT,
+                ),
+            )
 
-    return float(response.text.strip()) > 0.75
+            return float(response.text.strip()) > 0.75
+
+        except Exception as e:
+            print(f"Ошибка запроса к Gemini ({attempt + 1}/3): {e}")
+
+            if attempt < 2:
+                await asyncio.sleep(5)
+
+    # Если все 3 попытки завершились ошибкой
+    return False
 
 
 
