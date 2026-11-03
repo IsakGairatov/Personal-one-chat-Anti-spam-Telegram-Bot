@@ -1,6 +1,7 @@
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, LinkPreviewOptions
+from aiogram.enums import ParseMode
 from config import CHAT_ID
 
 from services.ai_apis.Gemini_googling2 import ask_ai
@@ -22,7 +23,12 @@ async def ask_handler(message: Message):
     try:
         answer = await ask_ai(question)
         await processing_message.delete()
-        await message.reply(answer)
+
+        await message.reply(
+            answer.replace("**", "*"),
+            parse_mode=ParseMode.MARKDOWN,
+            link_preview_options= LinkPreviewOptions(is_disabled=True)
+        )
 
     except Exception:
         await processing_message.delete()
