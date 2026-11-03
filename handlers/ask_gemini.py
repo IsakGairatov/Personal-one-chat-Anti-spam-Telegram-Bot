@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from config import CHAT_ID
 
-from services.ai_apis.Gemini_googling import ask_ai
+from services.ai_apis.Gemini_googling2 import ask_ai
 
 router = Router()
 

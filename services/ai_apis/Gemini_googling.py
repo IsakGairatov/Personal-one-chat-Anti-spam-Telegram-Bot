@@ -30,6 +30,3 @@ async def ask_ai(text: str) -> str:
     )
 
     return response.text.strip()
-
-
-
