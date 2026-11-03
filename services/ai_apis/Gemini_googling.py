@@ -22,7 +22,7 @@ SYSTEM_PROMPT = """Ты — AI-ассистент в Telegram-чате.
 
 async def ask_ai(text: str) -> str:
     response = await client.aio.models.generate_content(
-        model="gemini-3.1-flash-lite",
+        model="gemini-3.5-flash-lite",
         contents=f"Сообщение:\n{text}",
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,

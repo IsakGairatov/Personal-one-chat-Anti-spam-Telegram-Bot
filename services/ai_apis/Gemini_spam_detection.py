@@ -39,7 +39,7 @@ async def check_spam(text: str) -> bool:
     for attempt in range(3):
         try:
             response = await client.aio.models.generate_content(
-                model="gemini-3.1-flash-lite",
+                model="gemini-3.5-flash-lite",
                 contents=f"Сообщение:\n{text}",
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT,
@@ -52,7 +52,7 @@ async def check_spam(text: str) -> bool:
             print(f"Ошибка запроса к Gemini ({attempt + 1}/3): {e}")
 
             if attempt < 2:
-                await asyncio.sleep(5)
+                await asyncio.sleep(15)
 
     # Если все 3 попытки завершились ошибкой
     return False
