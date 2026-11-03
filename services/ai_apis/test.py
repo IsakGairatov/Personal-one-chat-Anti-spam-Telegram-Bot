@@ -3,7 +3,7 @@ from Gemini_googling2 import ask_ai
 
 async def main():
     print(await ask_ai(
-        "Какая последняя версия ACE-Step? Найди информацию в интернете."
+        "Что произошло 3 ноября 2026 года в киеве?"
     ))
 
 asyncio.run(main())
