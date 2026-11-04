@@ -24,11 +24,22 @@ async def ask_handler(message: Message):
         answer = await ask_ai(question)
         await processing_message.delete()
 
-        await message.reply(
-            answer.replace("**", "*"),
-            parse_mode=ParseMode.MARKDOWN,
-            link_preview_options= LinkPreviewOptions(is_disabled=True)
-        )
+        from aiogram.utils.formatting import ExpandableBlockQuote
+        from aiogram.types import LinkPreviewOptions
+
+        if len(answer) > 300:
+            content = ExpandableBlockQuote(answer)
+
+            await message.reply(
+                **content.as_kwargs(),
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
+            )
+        else:
+            await message.reply(
+                answer.replace("**", "*"),
+                parse_mode=ParseMode.MARKDOWN,
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
+            )
 
     except Exception:
         await processing_message.delete()
