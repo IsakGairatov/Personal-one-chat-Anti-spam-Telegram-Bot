@@ -27,7 +27,7 @@ async def ask_handler(message: Message):
         from aiogram.utils.formatting import ExpandableBlockQuote
         from aiogram.types import LinkPreviewOptions
 
-        if len(answer) > 300:
+        if len(answer) > 500:
             content = ExpandableBlockQuote(answer)
 
             await message.reply(
