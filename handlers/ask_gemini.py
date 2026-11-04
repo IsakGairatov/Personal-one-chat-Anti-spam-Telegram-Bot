@@ -28,16 +28,17 @@ async def ask_handler(message: Message):
         from aiogram.types import LinkPreviewOptions
 
         if len(answer) > 500:
-            content = ExpandableBlockQuote(answer)
+            answer = f"<blockquote expandable>{answer}</blockquote>"
 
             await message.reply(
-                **content.as_kwargs(),
+                answer,
+                parse_mode=ParseMode.HTML,
                 link_preview_options=LinkPreviewOptions(is_disabled=True),
             )
         else:
             await message.reply(
-                answer.replace("**", "*"),
-                parse_mode=ParseMode.MARKDOWN,
+                answer,
+                parse_mode=ParseMode.HTML,
                 link_preview_options=LinkPreviewOptions(is_disabled=True),
             )
 
