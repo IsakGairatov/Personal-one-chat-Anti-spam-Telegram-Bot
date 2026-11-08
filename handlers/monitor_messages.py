@@ -32,15 +32,26 @@ async def message_handler(message: Message):
     else:
         us_name = message.from_user.first_name
 
+
+    if message.via_bot and await has_foreign_link(text_to_check, message.via_bot.username):
+        try:
+            await message.delete()
+        except Exception:
+            print("delete via_bot foreign link error")
+
+        if message.guest_bot_caller_user:
+            await punish_guest_caller(text_to_check, message, "Foreign link")
+        return
+
     c_user = await get_or_create_user(
         message.from_user.id,
         message.from_user.username,
         message.from_user.first_name
     )
 
-    if message.reply_markup:
+    if message.reply_markup and not message.via_bot:
         await message.delete()
-        await add_to_spam(c_user, message, text_to_check,"Button", us_name)
+        await add_to_spam(c_user, message, text_to_check, "Button", us_name)
         return
 
     if await basic_tglink_spam_detection(text_to_check, message):
@@ -142,6 +153,30 @@ async def has_tg_chat_link(text_to_check: str, message: Message) -> bool:
 
         except Exception:
             continue
+
+    return False
+
+async def has_foreign_link(text: str, via_bot_username: str | None) -> bool:
+    allowed = {via_bot_username.lower()} if via_bot_username else set()
+
+    # 1. t.me / telegram.me ссылки
+    for url in TG_LINK_PATTERN.findall(text or ""):
+        m = re.search(r"(?:t\.me|telegram\.me)/([A-Za-z0-9_]+)", url, re.IGNORECASE)
+        if m and m.group(1).lower() in allowed:
+            continue  # ссылка на самого via_bot
+        return True   # ссылка на чужой канал/бота
+
+    # 2. @username в тексте
+    for name in USERNAME_PATTERN.findall(text or ""):
+        if name.lower() in allowed:
+            continue
+        return True   # упоминание чужого аккаунта/бота
+
+    # 3. прочие домены (http://... не на t.me)
+    for url in re.findall(r"https?://[^\s]+", text or "", re.IGNORECASE):
+        if re.search(r"(?:t\.me|telegram\.me)/", url, re.IGNORECASE):
+            continue  # уже обработано в п.1
+        return True   # сторонний домен
 
     return False
 
